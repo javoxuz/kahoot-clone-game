@@ -62,10 +62,24 @@ export default function HostGame() {
 
   const handleStartGame = () => {
     setGameStatus('active');
+    // Update game session status in localStorage
+    const gameSession = localStorage.getItem(`game_${gameCode}`);
+    if (gameSession) {
+      const session = JSON.parse(gameSession);
+      session.status = 'active';
+      localStorage.setItem(`game_${gameCode}`, JSON.stringify(session));
+    }
   };
 
   const handleEndGame = () => {
     setGameStatus('finished');
+    // Update game session status in localStorage
+    const gameSession = localStorage.getItem(`game_${gameCode}`);
+    if (gameSession) {
+      const session = JSON.parse(gameSession);
+      session.status = 'finished';
+      localStorage.setItem(`game_${gameCode}`, JSON.stringify(session));
+    }
   };
 
   return (

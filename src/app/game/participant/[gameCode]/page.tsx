@@ -26,6 +26,7 @@ export default function ParticipantGame({
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [gameStarted, setGameStarted] = useState(false);
+  const [gameStatus, setGameStatus] = useState<'waiting' | 'active' | 'finished'>('waiting');
   const [participants, setParticipants] = useState<any[]>([]);
 
   useEffect(() => {
@@ -106,6 +107,28 @@ export default function ParticipantGame({
       }
     }
   }, [isAnswered, gameCode]);
+
+  useEffect(() => {
+    // Poll for game status changes
+    const statusInterval = setInterval(() => {
+      const gameSession = localStorage.getItem(`game_${gameCode}`);
+      if (gameSession) {
+        const session = JSON.parse(gameSession);
+        setGameStatus(session.status || 'waiting');
+        if (session.status === 'active' && !gameStarted) {
+          setGameStarted(true);
+        }
+        if (session.status === 'finished') {
+          // Game finished, redirect to results
+          if (currentQuestionIndex >= ((quiz as any)?.questions || []).length - 1) {
+            window.location.href = '/results';
+          }
+        }
+      }
+    }, 500);
+
+    return () => clearInterval(statusInterval);
+  }, [gameCode, quiz, currentQuestionIndex, gameStarted]);
 
   const handleAnswerClick = (answerId: number) => {
     if (!isAnswered) {
