@@ -1,0 +1,152 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Users
+model User {
+  id                String      @id @default(cuid())
+  email             String      @unique
+  name              String?
+  password          String
+  avatar            String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  // Relations
+  quizzes           Quiz[]
+  hostedGames       GameSession[] @relation("host")
+  participants      Participant[]
+  
+  @@map("users")
+}
+
+// Quizzes - Tests
+model Quiz {
+  id                Int         @id @default(autoincrement())
+  userId            String
+  title             String
+  description       String?
+  isPublic          Boolean     @default(true)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  // Relations
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions         Question[]
+  gameSessions      GameSession[]
+  
+  @@index([userId])
+  @@map("quizzes")
+}
+
+// Questions - Savollar
+model Question {
+  id                Int         @id @default(autoincrement())
+  quizId            Int
+  questionText      String
+  questionType      String      @default("multiple_choice") // multiple_choice, true_false
+  timeLimit         Int         @default(30) // seconds
+  points            Int         @default(100)
+  orderIndex        Int
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  // Relations
+  quiz              Quiz        @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  answers           Answer[]
+  participantAnswers ParticipantAnswer[]
+  
+  @@index([quizId])
+  @@map("questions")
+}
+
+// Answers - Javoblar
+model Answer {
+  id                Int         @id @default(autoincrement())
+  questionId        Int
+  answerText        String
+  isCorrect         Boolean
+  orderIndex        Int
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  // Relations
+  question          Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  participantAnswers ParticipantAnswer[]
+  
+  @@index([questionId])
+  @@map("answers")
+}
+
+// Game Sessions - O'yin Sessiyalari
+model GameSession {
+  id                Int         @id @default(autoincrement())
+  quizId            Int
+  hostId            String
+  gameCode          String      @unique
+  status            String      @default("waiting") // waiting, active, finished
+  currentQuestionIndex Int      @default(0)
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  // Relations
+  quiz              Quiz        @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  host              User        @relation("host", fields: [hostId], references: [id], onDelete: Cascade)
+  participants      Participant[]
+  
+  @@index([quizId])
+  @@index([hostId])
+  @@map("game_sessions")
+}
+
+// Participants - Ishtirokchilar
+model Participant {
+  id                Int         @id @default(autoincrement())
+  gameSessionId     Int
+  userId            String?
+  nickname          String
+  totalScore        Int         @default(0)
+  joinedAt          DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  // Relations
+  gameSession       GameSession @relation(fields: [gameSessionId], references: [id], onDelete: Cascade)
+  user              User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  answers           ParticipantAnswer[]
+  
+  @@index([gameSessionId])
+  @@index([userId])
+  @@map("participants")
+}
+
+// Participant Answers - Ishtirokchi Javoblari
+model ParticipantAnswer {
+  id                Int         @id @default(autoincrement())
+  participantId     Int
+  questionId        Int
+  answerId          Int?
+  isCorrect         Boolean
+  timeTaken         Int         // milliseconds
+  pointsEarned      Int         @default(0)
+  answeredAt        DateTime    @default(now())
+  
+  // Relations
+  participant       Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  question          Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answer            Answer?     @relation(fields: [answerId], references: [id], onDelete: SetNull)
+  
+  @@index([participantId])
+  @@index([questionId])
+  @@index([answerId])
+  @@map("participant_answers")
+}
